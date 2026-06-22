@@ -116,8 +116,8 @@ export function gerarResidenciasIniciais(): Residencia[] {
       bairro: raw.bairro,
       endereco: raw.endereco,
       observacoesGerais: "",
-      estadoFumigacao: 'Agendada', // Sem registo activo ainda na campanha corrente
-      estadoACS: 'Agendada',        // Sem registo activo ainda na campanha corrente
+      estadoFumigacao: 'Pendente', // Sem registo activo ainda na campanha corrente
+      estadoACS: 'Pendente',        // Sem registo activo ainda na campanha corrente
       ultimaFumigacao,             // Fumigadas no mês de Maio
       ultimaACS: 'Nenhuma',
       empresaId,
@@ -149,7 +149,7 @@ export function gerarHistoricoInicial(): IntervencaoHistorico[] {
       dataHora,
       estadoAnterior: 'Agendada',
       estadoNovo: 'Concluída',
-      observacoes: 'Fumigação da campanha de Maio realizada com sucesso.',
+      observacoes: '', // Sem observações para iniciar limpo
       utilizadorResponsavel: i % 2 === 0 ? 'Henrique Matusse (EcoPest)' : 'Tatiana Macuácua (Sanex)',
     });
   }
@@ -159,12 +159,12 @@ export function gerarHistoricoInicial(): IntervencaoHistorico[] {
 
 // Inicializar e guardar dados nos cookies/localStorage para persistência duradoura
 export function obterDadosIniciais() {
-  if (localStorage.getItem('exofix_seed_version') !== '3') {
+  if (localStorage.getItem('exofix_seed_version') !== '4') {
     localStorage.removeItem('exofix_residencias');
     localStorage.removeItem('exofix_empresas');
     localStorage.removeItem('exofix_planeamentos');
     localStorage.removeItem('exofix_historico');
-    localStorage.setItem('exofix_seed_version', '3');
+    localStorage.setItem('exofix_seed_version', '4');
   }
 
   const residenciasLS = localStorage.getItem('exofix_residencias');
@@ -228,3 +228,71 @@ export function resetarDados() {
   localStorage.removeItem('exofix_user');
   return obterDadosIniciais();
 }
+
+export function sincronizarEstadosResidencias(
+  residencias: Residencia[],
+  planeamentos: Planeamento[],
+  dataHoje: string = '2026-06-22'
+): Residencia[] {
+  return residencias.map(res => {
+    // Procurar planejamentos para esta residência
+    const planFum = planeamentos.find(p => p.tipo === 'Fumigação' && p.residenciaIds.includes(res.id));
+    const planACS = planeamentos.find(p => p.tipo === 'Manutenção ACS' && p.residenciaIds.includes(res.id));
+
+    let estadoFumigacao = res.estadoFumigacao;
+    let estadoACS = res.estadoACS;
+
+    // Regras de Sincronização Automática para Fumigação
+    if (estadoFumigacao !== 'Concluída' && estadoFumigacao !== 'Em andamento' && estadoFumigacao !== 'Não realizada') {
+      if (planFum) {
+        if (planFum.data < dataHoje) {
+          estadoFumigacao = 'Atrasada';
+        } else {
+          estadoFumigacao = 'Agendada';
+        }
+      } else {
+        estadoFumigacao = 'Pendente';
+      }
+    } else if (estadoFumigacao === 'Agendada' || estadoFumigacao === 'Atrasada' || estadoFumigacao === 'Pendente') {
+      if (planFum) {
+        if (planFum.data < dataHoje) {
+          estadoFumigacao = 'Atrasada';
+        } else {
+          estadoFumigacao = 'Agendada';
+        }
+      } else {
+        estadoFumigacao = 'Pendente';
+      }
+    }
+
+    // Regras de Sincronização Automática para ACS
+    if (estadoACS !== 'Concluída' && estadoACS !== 'Em andamento' && estadoACS !== 'Não realizada') {
+      if (planACS) {
+        if (planACS.data < dataHoje) {
+          estadoACS = 'Atrasada';
+        } else {
+          estadoACS = 'Agendada';
+        }
+      } else {
+        estadoACS = 'Pendente';
+      }
+    } else if (estadoACS === 'Agendada' || estadoACS === 'Atrasada' || estadoACS === 'Pendente') {
+      if (planACS) {
+        if (planACS.data < dataHoje) {
+          estadoACS = 'Atrasada';
+        } else {
+          estadoACS = 'Agendada';
+        }
+      } else {
+        estadoACS = 'Pendente';
+      }
+    }
+
+    return {
+      ...res,
+      estadoFumigacao,
+      estadoACS
+    };
+  });
+}
+

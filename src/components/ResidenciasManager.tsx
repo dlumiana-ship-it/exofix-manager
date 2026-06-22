@@ -187,13 +187,20 @@ export default function ResidenciasManager({
       case 'Não realizada':
         classes = "bg-rose-50 text-rose-700 border-rose-200 ring-rose-600/20";
         break;
+      case 'Pendente':
+        classes = "bg-slate-50 text-slate-700 border-slate-200 ring-slate-600/20";
+        break;
+      case 'Atrasada':
+        classes = "bg-rose-50 text-rose-750 border-rose-300 ring-rose-600/20 font-bold animate-pulse";
+        break;
     }
     return (
       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${classes}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${
           estado === 'Concluída' ? 'bg-green-600' :
           estado === 'Em andamento' ? 'bg-amber-500' :
-          estado === 'Agendada' ? 'bg-blue-500' : 'bg-rose-600'
+          estado === 'Agendada' ? 'bg-blue-500' :
+          estado === 'Atrasada' ? 'bg-rose-600' : 'bg-slate-400'
         }`} />
         {estado}
       </span>

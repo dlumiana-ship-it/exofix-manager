@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 import { Residencia, Empresa, Planeamento, IntervencaoHistorico, EstadoIntervencao } from './types';
-import { obterDadosIniciais, salvarDados, resetarDados } from './data';
+import { obterDadosIniciais, salvarDados, resetarDados, sincronizarEstadosResidencias } from './data';
 
 import LoginForm from './components/LoginForm';
 import AdminDashboard from './components/AdminDashboard';
@@ -50,7 +50,8 @@ export default function App() {
   // Inicializar dados do LocalStorage no Boot
   useEffect(() => {
     const dados = obterDadosIniciais();
-    setResidencias(dados.residencias);
+    const resSincronizadas = sincronizarEstadosResidencias(dados.residencias, dados.planeamentos);
+    setResidencias(resSincronizadas);
     setEmpresas(dados.empresas);
     setPlaneamentos(dados.planeamentos);
     setHistorico(dados.historico);
@@ -69,12 +70,13 @@ export default function App() {
     novosPlan: Planeamento[],
     novoHist: IntervencaoHistorico[]
   ) => {
-    setResidencias(novasRes);
+    const resSincronizadas = sincronizarEstadosResidencias(novasRes, novosPlan);
+    setResidencias(resSincronizadas);
     setEmpresas(novasEmp);
     setPlaneamentos(novosPlan);
     setHistorico(novoHist);
     salvarDados({
-      residencias: novasRes,
+      residencias: resSincronizadas,
       empresas: novasEmp,
       planeamentos: novosPlan,
       historico: novoHist
@@ -110,6 +112,19 @@ export default function App() {
       setAdminTab('dashboard');
       alert('A base de dados de demonstração da Exofix foi redefinida com sucesso.');
     }
+  };
+
+  // Atribuição de casas em lote para uma empresa prestadora
+  const handleBatchAssignResidencias = (empId: string, resIds: string[]) => {
+    const novasRes = residencias.map(r => {
+      if (resIds.includes(r.id)) {
+        return { ...r, empresaId: empId };
+      } else if (r.empresaId === empId) {
+        return { ...r, empresaId: '' };
+      }
+      return r;
+    });
+    sincronizarBaseDeDados(novasRes, empresas, planeamentos, historico);
   };
 
   // --- CRUD RESIDÊNCIAS ---
@@ -540,6 +555,7 @@ export default function App() {
                 onAddEmpresa={handleAddEmpresa}
                 onUpdateEmpresa={handleUpdateEmpresa}
                 onExcluirEmpresa={handleExcluirEmpresa}
+                onBatchAssignResidencias={handleBatchAssignResidencias}
               />
             )}
 

@@ -472,10 +472,14 @@ export default function PlaneamentoManager({
                                 <div className="text-[11px]">
                                   <div className="font-mono font-bold text-slate-805 flex items-center gap-1.5">
                                     <span>{res.codigo}</span>
-                                    <span className={`text-[9px] px-1 rounded ${
-                                      lastServ === 'Concluída' ? 'bg-green-100 text-green-700' :
-                                      lastServ === 'Não realizada' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'
-                                    }`}>
+                                     <span className={`text-[9px] px-1 rounded ${
+                                       lastServ === 'Concluída' ? 'bg-green-100 text-green-700' :
+                                       lastServ === 'Em andamento' ? 'bg-amber-100 text-amber-700' :
+                                       lastServ === 'Agendada' ? 'bg-blue-100 text-blue-700' :
+                                       lastServ === 'Não realizada' ? 'bg-rose-100 text-rose-700' :
+                                       lastServ === 'Atrasada' ? 'bg-rose-100 text-rose-800 font-bold animate-pulse' :
+                                       'bg-slate-100 text-slate-500'
+                                     }`}>
                                       {lastServ}
                                     </span>
                                   </div>
@@ -838,10 +842,12 @@ export default function PlaneamentoManager({
                             if (!rs) return null;
                             const estadoDoServico = p.tipo === 'Fumigação' ? rs.estadoFumigacao : rs.estadoACS;
                             
-                            let estCor = "text-slate-600 bg-slate-100 border-slate-200";
+                            let estCor = "text-slate-700 bg-slate-50 border-slate-200";
                             if (estadoDoServico === 'Concluída') estCor = "text-green-700 bg-green-50 border-green-200";
                             if (estadoDoServico === 'Em andamento') estCor = "text-amber-700 bg-amber-50 border-amber-200";
                             if (estadoDoServico === 'Não realizada') estCor = "text-rose-700 bg-rose-50 border-rose-200";
+                            if (estadoDoServico === 'Agendada') estCor = "text-blue-700 bg-blue-50 border-blue-200";
+                            if (estadoDoServico === 'Atrasada') estCor = "text-rose-750 bg-rose-50 border-rose-300 font-bold animate-pulse";
 
                             return (
                               <div key={resId} className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between space-y-2">

@@ -189,7 +189,14 @@ export default function PrestadoraDashboard({
     .slice(0, 5);
 
   const comentariosEmpresa = historico
-    .filter(h => (h.utilizadorResponsavel.includes(empresa.contactoPrincipal) || h.utilizadorResponsavel.includes(identificadorEmpresa)) && h.observacoes && h.observacoes.trim() !== '')
+    .filter(h => 
+      (h.utilizadorResponsavel.includes(empresa.contactoPrincipal) || h.utilizadorResponsavel.includes(identificadorEmpresa)) && 
+      h.observacoes && 
+      h.observacoes.trim() !== '' &&
+      !h.observacoes.startsWith('Residência registada') && 
+      !h.observacoes.startsWith('Estado alterado') && 
+      !h.observacoes.startsWith('Intervenção de')
+    )
     .slice()
     .reverse()
     .slice(0, 4);
@@ -884,6 +891,12 @@ export default function PrestadoraDashboard({
                     } else if (tarefa.estado === 'Não realizada') {
                       badgeCor = "bg-rose-50 border-rose-250 text-rose-700";
                       dotCor = "bg-rose-600";
+                    } else if (tarefa.estado === 'Pendente') {
+                      badgeCor = "bg-slate-50 border-slate-200 text-slate-700";
+                      dotCor = "bg-slate-400";
+                    } else if (tarefa.estado === 'Atrasada') {
+                      badgeCor = "bg-rose-50 border-rose-300 text-rose-750 font-bold animate-pulse";
+                      dotCor = "bg-rose-600";
                     }
 
                     return (
@@ -1134,15 +1147,19 @@ export default function PrestadoraDashboard({
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-semibold">
                         {residenciasFiltradas.map((res) => {
-                          let colorFum = "bg-slate-100 text-slate-600 border-slate-200";
+                          let colorFum = "bg-slate-50 text-slate-700 border-slate-200";
                           if (res.estadoFumigacao === 'Concluída') colorFum = "bg-green-50 text-green-700 border-green-200";
                           if (res.estadoFumigacao === 'Em andamento') colorFum = "bg-amber-50 text-amber-700 border-amber-200";
                           if (res.estadoFumigacao === 'Não realizada') colorFum = "bg-rose-50 text-rose-700 border-rose-200";
+                          if (res.estadoFumigacao === 'Agendada') colorFum = "bg-blue-50 text-blue-700 border-blue-200";
+                          if (res.estadoFumigacao === 'Atrasada') colorFum = "bg-rose-50 text-rose-750 border-rose-300 font-bold animate-pulse";
 
-                          let colorACS = "bg-slate-100 text-slate-600 border-slate-200";
+                          let colorACS = "bg-slate-50 text-slate-700 border-slate-200";
                           if (res.estadoACS === 'Concluída') colorACS = "bg-green-50 text-green-700 border-green-200";
                           if (res.estadoACS === 'Em andamento') colorACS = "bg-amber-50 text-amber-700 border-amber-200";
                           if (res.estadoACS === 'Não realizada') colorACS = "bg-rose-50 text-rose-700 border-rose-200";
+                          if (res.estadoACS === 'Agendada') colorACS = "bg-blue-50 text-blue-700 border-blue-200";
+                          if (res.estadoACS === 'Atrasada') colorACS = "bg-rose-50 text-rose-750 border-rose-300 font-bold animate-pulse";
 
                           return (
                             <tr key={res.id} className="hover:bg-slate-50/50 transition">
@@ -1161,10 +1178,12 @@ export default function PrestadoraDashboard({
                                   className={`px-3 py-1.5 rounded-full border text-[11px] font-bold hover:-translate-y-0.5 transition shadow-sm hover:shadow active:translate-y-0 inline-flex items-center gap-1.5 ${colorFum}`}
                                   title="Clique para alterar o estado da Fumigação"
                                 >
-                                  <span className={`w-1 h-1 rounded-full ${
-                                    res.estadoFumigacao === 'Concluída' ? 'bg-green-500' :
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    res.estadoFumigacao === 'Concluída' ? 'bg-green-600' :
                                     res.estadoFumigacao === 'Em andamento' ? 'bg-amber-500' :
-                                    res.estadoFumigacao === 'Não realizada' ? 'bg-rose-500' : 'bg-blue-500'
+                                    res.estadoFumigacao === 'Não realizada' ? 'bg-rose-600' :
+                                    res.estadoFumigacao === 'Agendada' ? 'bg-blue-500' :
+                                    res.estadoFumigacao === 'Atrasada' ? 'bg-rose-600' : 'bg-slate-400'
                                   }`} />
                                   {res.estadoFumigacao}
                                 </button>
@@ -1178,10 +1197,12 @@ export default function PrestadoraDashboard({
                                   className={`px-3 py-1.5 rounded-full border text-[11px] font-bold hover:-translate-y-0.5 transition shadow-sm hover:shadow active:translate-y-0 inline-flex items-center gap-1.5 ${colorACS}`}
                                   title="Clique para alterar o estado da Manutenção ACS"
                                 >
-                                  <span className={`w-1 h-1 rounded-full ${
-                                    res.estadoACS === 'Concluída' ? 'bg-green-500' :
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    res.estadoACS === 'Concluída' ? 'bg-green-600' :
                                     res.estadoACS === 'Em andamento' ? 'bg-amber-500' :
-                                    res.estadoACS === 'Não realizada' ? 'bg-rose-500' : 'bg-blue-500'
+                                    res.estadoACS === 'Não realizada' ? 'bg-rose-600' :
+                                    res.estadoACS === 'Agendada' ? 'bg-blue-500' :
+                                    res.estadoACS === 'Atrasada' ? 'bg-rose-600' : 'bg-slate-400'
                                   }`} />
                                   {res.estadoACS}
                                 </button>

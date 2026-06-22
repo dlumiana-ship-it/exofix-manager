@@ -1,6 +1,6 @@
 export type UserRole = 'ADMIN_EXOFIX' | 'PRESTADORA';
 
-export type EstadoIntervencao = 'Agendada' | 'Em andamento' | 'Concluída' | 'Não realizada';
+export type EstadoIntervencao = 'Agendada' | 'Em andamento' | 'Concluída' | 'Não realizada' | 'Pendente' | 'Atrasada';
 
 export interface Residencia {
   id: string;

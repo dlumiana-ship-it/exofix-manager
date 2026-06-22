@@ -27,6 +27,7 @@ interface EmpresasManagerProps {
   onAddEmpresa: (nova: Omit<Empresa, 'id'>) => void;
   onUpdateEmpresa: (atualizada: Empresa) => void;
   onExcluirEmpresa: (id: string) => void;
+  onBatchAssignResidencias: (empresaId: string, residenciaIds: string[]) => void;
 }
 
 export default function EmpresasManager({ 
@@ -34,10 +35,63 @@ export default function EmpresasManager({
   residencias, 
   onAddEmpresa, 
   onUpdateEmpresa, 
-  onExcluirEmpresa 
+  onExcluirEmpresa,
+  onBatchAssignResidencias
 }: EmpresasManagerProps) {
   const [showModal, setShowModal] = useState(false);
   const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null);
+
+  // Estados para Modal de Atribuição de Casas em Lote
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assigningEmpresa, setAssigningEmpresa] = useState<Empresa | null>(null);
+  const [tempSelectedResIds, setTempSelectedResIds] = useState<string[]>([]);
+  const [selectedZoneFilter, setSelectedZoneFilter] = useState('Todos');
+
+  const openAssignModal = (emp: Empresa) => {
+    setAssigningEmpresa(emp);
+    const jáAtribuídas = residencias.filter(r => r.empresaId === emp.id).map(r => r.id);
+    setTempSelectedResIds(jáAtribuídas);
+    setSelectedZoneFilter('Todos');
+    setShowAssignModal(true);
+  };
+
+  const zonasDisponiveis = Array.from(new Set(residencias.map(r => r.bairro))).sort();
+
+  const residenciasFiltradasModal = residencias.filter(r => {
+    return selectedZoneFilter === 'Todos' || r.bairro === selectedZoneFilter;
+  });
+
+  const toggleResSelection = (resId: string) => {
+    if (tempSelectedResIds.includes(resId)) {
+      setTempSelectedResIds(prev => prev.filter(id => id !== resId));
+    } else {
+      setTempSelectedResIds(prev => [...prev, resId]);
+    }
+  };
+
+  const selecionarTodasFiltradas = () => {
+    setTempSelectedResIds(prev => {
+      const novas = [...prev];
+      residenciasFiltradasModal.forEach(r => {
+        if (!novas.includes(r.id)) novas.push(r.id);
+      });
+      return novas;
+    });
+  };
+
+  const desmarcarTodasFiltradas = () => {
+    const idsFiltrados = residenciasFiltradasModal.map(r => r.id);
+    setTempSelectedResIds(prev => prev.filter(id => !idsFiltrados.includes(id)));
+  };
+
+  const handleSaveAssignment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (assigningEmpresa) {
+      onBatchAssignResidencias(assigningEmpresa.id, tempSelectedResIds);
+      setShowAssignModal(false);
+      setAssigningEmpresa(null);
+    }
+  };
 
   // States do Formulário
   const [nome, setNome] = useState('');
@@ -272,12 +326,21 @@ export default function EmpresasManager({
                 </div>
               </div>
 
+              {/* Vincular Casas em Lote */}
+              <button
+                type="button"
+                onClick={() => openAssignModal(emp)}
+                className="w-full py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm font-sans"
+              >
+                <Home className="w-3.5 h-3.5" /> Vincular Casas em Lote
+              </button>
+
               {/* Botões de Ação */}
               <div className="flex gap-2 pt-2 border-t border-gray-150">
                 <button
                   type="button"
                   onClick={() => openEditModal(emp)}
-                  className="flex-1 py-1.5 border border-gray-200 text-slate-600 hover:text-blue-600 hover:bg-gray-50 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1"
+                  className="flex-1 py-1.5 border border-gray-200 text-slate-655 hover:text-blue-600 hover:bg-gray-50 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1"
                 >
                   <Edit2 className="w-3.5 h-3.5" /> Editar
                 </button>
@@ -454,6 +517,139 @@ export default function EmpresasManager({
                   className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg shadow transition flex items-center gap-1.5"
                 >
                   <Save className="w-4 h-4" /> Guardar Dados
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Vincular Casas em Lote */}
+      {showAssignModal && assigningEmpresa && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in" id="assign-houses-modal">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden border border-gray-200 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="bg-[#111827] px-6 py-4 flex items-center justify-between text-white shrink-0">
+              <div>
+                <span className="text-[10px] text-teal-400 font-mono tracking-wider uppercase">Vínculo em Lote</span>
+                <h3 className="font-sans font-bold text-xs mt-0.5">
+                  Vincular Casas à Prestadora: {assigningEmpresa.nome}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowAssignModal(false)}
+                className="p-1 hover:bg-gray-800 rounded-lg transition text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Painel de Filtros e Seleção rápida no Modal */}
+            <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-655">Filtrar por Zona:</span>
+                <select
+                  value={selectedZoneFilter}
+                  onChange={(e) => setSelectedZoneFilter(e.target.value)}
+                  className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500 font-semibold"
+                >
+                  <option value="Todos">🏡 Todas as Zonas</option>
+                  {zonasDisponiveis.map(z => (
+                    <option key={z} value={z}>{z}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={selecionarTodasFiltradas}
+                  className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-bold border border-blue-200 transition"
+                >
+                  Selecionar Filtradas ({residenciasFiltradasModal.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={desmarcarTodasFiltradas}
+                  className="px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg font-bold border border-rose-250 transition"
+                >
+                  Desmarcar Filtradas
+                </button>
+              </div>
+            </div>
+
+            {/* Listagem de Casas com Checkbox */}
+            <form onSubmit={handleSaveAssignment} className="flex-1 overflow-y-auto p-6 flex flex-col space-y-4">
+              <span className="text-[11px] text-gray-500 font-medium font-sans">
+                Selecione as casas que deseja atribuir a esta prestadora. As casas desmarcadas serão desvinculadas se já estivessem atribuídas a ela.
+              </span>
+              
+              <div className="border border-gray-200 rounded-xl divide-y divide-gray-150 max-h-[300px] overflow-y-auto pr-1">
+                {Object.entries(
+                  residenciasFiltradasModal.reduce((acc: { [key: string]: Residencia[] }, r) => {
+                    if (!acc[r.bairro]) acc[r.bairro] = [];
+                    acc[r.bairro].push(r);
+                    return acc;
+                  }, {})
+                ).map(([zona, casas]) => (
+                  <div key={zona} className="p-3 bg-white space-y-2">
+                    <div className="font-bold text-gray-800 bg-gray-50/70 px-2 py-1 rounded border border-gray-100 text-[11px]">
+                      🏘️ {zona} ({casas.length} casas)
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-1">
+                      {casas.map(res => {
+                        const isChecked = tempSelectedResIds.includes(res.id);
+                        const outraEmpresa = res.empresaId && res.empresaId !== assigningEmpresa.id
+                          ? empresas.find(e => e.id === res.empresaId)?.nome.split(' (')[0]
+                          : null;
+
+                        return (
+                          <label
+                            key={res.id}
+                            className={`flex items-start gap-2.5 p-2 rounded-lg border transition-all cursor-pointer text-xs ${
+                              isChecked 
+                                ? 'bg-blue-50/40 border-blue-200' 
+                                : 'bg-white hover:bg-slate-50/50 border-slate-100'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleResSelection(res.id)}
+                              className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 shrink-0 mt-0.5"
+                            />
+                            <div>
+                              <div className="font-mono font-bold text-blue-700">{res.codigo}</div>
+                              <div className="font-bold text-gray-900 mt-0.5">{res.nomeOcupante}</div>
+                              <div className="text-[10px] text-gray-400 truncate max-w-[200px] mt-0.5">{res.endereco}</div>
+                              {outraEmpresa && (
+                                <span className="inline-block text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-semibold mt-1">
+                                  ⚠️ Vinculada à: {outraEmpresa}
+                                </span>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Botões do Modal Footer */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 shrink-0 mt-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowAssignModal(false)}
+                  className="px-4 py-2 border border-gray-200 rounded-lg text-slate-650 hover:bg-gray-50 transition font-bold text-xs"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 text-xs font-sans"
+                >
+                  <Save className="w-4 h-4" /> Gravar Vínculos ({tempSelectedResIds.length})
                 </button>
               </div>
             </form>

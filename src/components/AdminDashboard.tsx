@@ -38,7 +38,10 @@ export default function AdminDashboard({ residencias, empresas, historico, onNav
   const emAndamento = residencias.filter(r => r.estadoFumigacao === 'Em andamento' || r.estadoACS === 'Em andamento').length;
 
   // Pendentes / Não Realizadas (restantes ou específicas)
-  const naoRealizadas = residencias.filter(r => r.estadoFumigacao === 'Não realizada' || r.estadoACS === 'Não realizada').length;
+  const naoRealizadas = residencias.filter(r => 
+    r.estadoFumigacao === 'Não realizada' || r.estadoACS === 'Não realizada' ||
+    r.estadoFumigacao === 'Atrasada' || r.estadoACS === 'Atrasada'
+  ).length;
   const pendentesGerais = totalResidencias - concluidas;
 
   // 2. Indicadores de progresso por tipo de serviço
@@ -71,7 +74,13 @@ export default function AdminDashboard({ residencias, empresas, historico, onNav
 
   // 5. Comentários Recentes relevantes
   const comentariosRecentes = historico
-    .filter(h => h.observacoes && h.observacoes.trim() !== '')
+    .filter(h => 
+      h.observacoes && 
+      h.observacoes.trim() !== '' && 
+      !h.observacoes.startsWith('Residência registada') && 
+      !h.observacoes.startsWith('Estado alterado') && 
+      !h.observacoes.startsWith('Intervenção de')
+    )
     .slice()
     .reverse()
     .slice(0, 4);
@@ -301,6 +310,8 @@ export default function AdminDashboard({ residencias, empresas, historico, onNav
                   if (act.estadoNovo === 'Concluída') badgeColor = "bg-green-50 text-green-700 ring-green-600/10";
                   if (act.estadoNovo === 'Em andamento') badgeColor = "bg-amber-50 text-amber-700 ring-amber-600/10";
                   if (act.estadoNovo === 'Não realizada') badgeColor = "bg-rose-50 text-rose-700 ring-rose-600/10";
+                  if (act.estadoNovo === 'Pendente') badgeColor = "bg-slate-50 text-slate-700 ring-slate-600/10";
+                  if (act.estadoNovo === 'Atrasada') badgeColor = "bg-rose-50 text-rose-750 font-bold ring-rose-600/10 animate-pulse";
 
                   return (
                     <div key={act.id} className="text-xs border-b border-gray-100 pb-2.5 last:border-b-0 last:pb-0 font-medium" id={`act-${act.id}`}>
