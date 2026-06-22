@@ -1,0 +1,6 @@
+{
+  "name": "Exofix - Gestão de Intervenções Residenciais",
+  "description": "Sistema de gestão de fumigações, manutenções de ACS e intervenções residenciais para a Exofix e empresas prestadoras de serviços.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
