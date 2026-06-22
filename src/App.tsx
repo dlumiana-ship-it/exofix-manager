@@ -47,23 +47,108 @@ export default function App() {
   // Controle de menu responsivo
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Inicializar dados do LocalStorage no Boot
+  // Inicializar dados e registrar o EventSource de Sincronização em Tempo Real
   useEffect(() => {
-    const dados = obterDadosIniciais();
-    const resSincronizadas = sincronizarEstadosResidencias(dados.residencias, dados.planeamentos);
-    setResidencias(resSincronizadas);
-    setEmpresas(dados.empresas);
-    setPlaneamentos(dados.planeamentos);
-    setHistorico(dados.historico);
-
     // Restaurar sessão se houver
     const userLS = localStorage.getItem('exofix_user');
     if (userLS) {
       setCurrentUser(JSON.parse(userLS));
     }
+
+    // Carregar dados iniciais do servidor
+    async function loadServerData() {
+      try {
+        const res = await fetch('/api/data');
+        if (!res.ok) throw new Error('Servidor indisponível');
+        const data = await res.json();
+
+        if (data.initialized === false) {
+          // Servidor limpo: gerar semente padrão (casas reais, nenhuma empresa)
+          const dadosIniciais = obterDadosIniciais();
+          const resSincronizadas = sincronizarEstadosResidencias(dadosIniciais.residencias, dadosIniciais.planeamentos);
+          
+          const payload = {
+            initialized: true,
+            residencias: resSincronizadas,
+            empresas: dadosIniciais.empresas,
+            planeamentos: dadosIniciais.planeamentos,
+            historico: dadosIniciais.historico
+          };
+
+          // Gravar no servidor
+          await fetch('/api/data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          setResidencias(resSincronizadas);
+          setEmpresas(dadosIniciais.empresas);
+          setPlaneamentos(dadosIniciais.planeamentos);
+          setHistorico(dadosIniciais.historico);
+          salvarDados(payload);
+        } else {
+          // Servidor possui dados guardados, ler e atualizar
+          const resSincronizadas = sincronizarEstadosResidencias(data.residencias, data.planeamentos);
+          setResidencias(resSincronizadas);
+          setEmpresas(data.empresas);
+          setPlaneamentos(data.planeamentos);
+          setHistorico(data.historico);
+          salvarDados({
+            residencias: resSincronizadas,
+            empresas: data.empresas,
+            planeamentos: data.planeamentos,
+            historico: data.historico
+          });
+        }
+      } catch (err) {
+        console.warn('Erro ao ligar ao servidor de sincronização. Usando cache local:', err);
+        // Fallback local
+        const dados = obterDadosIniciais();
+        const resSincronizadas = sincronizarEstadosResidencias(dados.residencias, dados.planeamentos);
+        setResidencias(resSincronizadas);
+        setEmpresas(dados.empresas);
+        setPlaneamentos(dados.planeamentos);
+        setHistorico(dados.historico);
+      }
+    }
+
+    loadServerData();
+
+    // Conectar ao canal de sincronização em tempo real (SSE)
+    const eventSource = new EventSource('/api/sync');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data && data.residencias) {
+          const resSincronizadas = sincronizarEstadosResidencias(data.residencias, data.planeamentos);
+          setResidencias(resSincronizadas);
+          setEmpresas(data.empresas);
+          setPlaneamentos(data.planeamentos);
+          setHistorico(data.historico);
+          salvarDados({
+            residencias: resSincronizadas,
+            empresas: data.empresas,
+            planeamentos: data.planeamentos,
+            historico: data.historico
+          });
+        }
+      } catch (err) {
+        console.error('Erro ao ler atualização em tempo real:', err);
+      }
+    };
+
+    eventSource.onerror = () => {
+      console.warn('Conexão em tempo real suspensa. Tentando reconectar...');
+    };
+
+    return () => {
+      eventSource.close();
+    };
   }, []);
 
-  // Sincronizar qualquer alteração do estado para o localStorage
+  // Sincronizar qualquer alteração local com o servidor e local cache
   const sincronizarBaseDeDados = (
     novasRes: Residencia[],
     novasEmp: Empresa[],
@@ -71,6 +156,8 @@ export default function App() {
     novoHist: IntervencaoHistorico[]
   ) => {
     const resSincronizadas = sincronizarEstadosResidencias(novasRes, novosPlan);
+    
+    // Atualizar localmente imediato (Optimistic UI)
     setResidencias(resSincronizadas);
     setEmpresas(novasEmp);
     setPlaneamentos(novosPlan);
@@ -80,6 +167,21 @@ export default function App() {
       empresas: novasEmp,
       planeamentos: novosPlan,
       historico: novoHist
+    });
+
+    // Enviar ao servidor em segundo plano para propagação em tempo real
+    fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        initialized: true,
+        residencias: resSincronizadas,
+        empresas: novasEmp,
+        planeamentos: novosPlan,
+        historico: novoHist
+      })
+    }).catch(err => {
+      console.error('Falha ao sincronizar dados com o servidor central:', err);
     });
   };
 
@@ -100,17 +202,14 @@ export default function App() {
     setMobileMenuOpen(false);
   };
 
-  // Reset Geral da Demo (Voltar ao sequeiro de 50 casas e 3 prestadoras originais)
+  // Reset Geral do Sistema (Zerar dados e restaurar as 38 residências originais)
   const handleReset = () => {
-    if (confirm('Deseja repor a base de dados de demonstração ao estado original? Todos os novos cadastros e mudanças locais serão substituídos.')) {
+    if (confirm('Deseja repor a base de dados operacional ao estado original? Todos os novos cadastros e mudanças locais serão substituídos.')) {
       const dados = resetarDados();
-      setResidencias(dados.residencias);
-      setEmpresas(dados.empresas);
-      setPlaneamentos(dados.planeamentos);
-      setHistorico(dados.historico);
+      sincronizarBaseDeDados(dados.residencias, dados.empresas, dados.planeamentos, dados.historico);
       setCurrentUser(null);
       setAdminTab('dashboard');
-      alert('A base de dados de demonstração da Exofix foi redefinida com sucesso.');
+      alert('A base de dados do Exofix Manager foi restaurada com sucesso.');
     }
   };
 

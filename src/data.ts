@@ -1,46 +1,6 @@
 import { Empresa, Residencia, Planeamento, IntervencaoHistorico } from './types';
 
-export const INITIAL_EMPRESAS: Empresa[] = [
-  {
-    id: 'EMP-001',
-    nome: 'EcoPest Moçambique',
-    nuit: '400123456',
-    contactoPrincipal: 'Henrique Matusse',
-    telefone: '+258 84 123 4567',
-    email: 'contacto@ecopest.co.mz',
-    endereco: 'Av. Mao Tse Tung, nº 1420, Maputo',
-    username: 'ecopest',
-    passwordKey: 'ecopest123',
-    ativa: true,
-    isPasswordChanged: false,
-  },
-  {
-    id: 'EMP-002',
-    nome: 'Serviços Climáticos Lda (ServiClima)',
-    nuit: '400987654',
-    contactoPrincipal: 'Sandro Nhantumbo',
-    telefone: '+258 82 987 6543',
-    email: 'geral@serviclima.co.mz',
-    endereco: 'Rua da Resistência, nº 88, Polana',
-    username: 'serviclima',
-    passwordKey: 'clima2026',
-    ativa: true,
-    isPasswordChanged: false,
-  },
-  {
-    id: 'EMP-003',
-    nome: 'Sanex Fumigações e ACS',
-    nuit: '400555666',
-    contactoPrincipal: 'Tatiana Macuácua',
-    telefone: '+258 87 555 1122',
-    email: 'operativo@sanex.co.mz',
-    endereco: 'Av. de Angola, Bairro de Chamanculo, Maputo',
-    username: 'sanex',
-    passwordKey: 'sanexpass',
-    ativa: true,
-    isPasswordChanged: false,
-  },
-];
+export const INITIAL_EMPRESAS: Empresa[] = [];
 
 const RESIDENCIAS_RAW = [
   // ZONA BEIRA
@@ -101,7 +61,6 @@ export function gerarResidenciasIniciais(): Residencia[] {
     const raw = RESIDENCIAS_RAW[i];
     const idNum = i + 1;
     const codigo = `EXO-${100 + idNum}`;
-    const empresaId = `EMP-00${(i % 3) + 1}`;
     
     // Dia da fumigação em maio correspondente (de 21 a 28)
     const diaMaio = 21 + (i % 8);
@@ -120,7 +79,7 @@ export function gerarResidenciasIniciais(): Residencia[] {
       estadoACS: 'Pendente',        // Sem registo activo ainda na campanha corrente
       ultimaFumigacao,             // Fumigadas no mês de Maio
       ultimaACS: 'Nenhuma',
-      empresaId,
+      empresaId: '',               // Nenhuma atribuída por padrão (para adicionar reais)
     });
   }
   
@@ -150,7 +109,7 @@ export function gerarHistoricoInicial(): IntervencaoHistorico[] {
       estadoAnterior: 'Agendada',
       estadoNovo: 'Concluída',
       observacoes: '', // Sem observações para iniciar limpo
-      utilizadorResponsavel: i % 2 === 0 ? 'Henrique Matusse (EcoPest)' : 'Tatiana Macuácua (Sanex)',
+      utilizadorResponsavel: 'Administração Exofix',
     });
   }
   
