@@ -64,8 +64,13 @@ export default function PlaneamentoManager({
   const [currentYear, setCurrentYear] = useState(2026);
   const [currentMonth, setCurrentMonth] = useState(5); // 0-indexed, 5 = Junho
 
-  // Busca residências disponíveis associadas à empresa selecionada
-  const residenciasDisponiveis = residencias.filter(r => r.empresaId === (currentRole === 'PRESTADORA' ? currentEmpresaId : empresaId));
+  // Estado para mostrar todas as residências ou apenas as atribuídas à empresa
+  const [mostrarTodasAsCasas, setMostrarTodasAsCasas] = useState(false);
+
+  // Busca residências disponíveis associadas à empresa selecionada ou todas
+  const residenciasDisponiveis = mostrarTodasAsCasas
+    ? residencias
+    : residencias.filter(r => r.empresaId === (currentRole === 'PRESTADORA' ? currentEmpresaId : empresaId));
 
   // Iniciar fluxo de edição
   const handleStartEdit = (plan: Planeamento) => {
@@ -379,14 +384,26 @@ export default function PlaneamentoManager({
 
             {/* Checklist de Residências Vinculadas */}
             <div className="md:col-span-2 flex flex-col space-y-3">
-              <div className="flex items-center justify-between border-b border-gray-200 pb-1 shrink-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-gray-200 pb-2 shrink-0">
                 <h4 className="font-bold text-slate-705">
                   Seleção de Casas ({selectedResidenciaIds.length} selecionadas){' '}
-                  <span className="text-slate-400 font-medium font-sans">
-                    — Associadas à {empresas.find(e => e.id === (currentRole === 'PRESTADORA' ? currentEmpresaId : empresaId))?.nome.split(' (')[0] || 'empresa'}
+                  <span className="text-slate-400 font-medium font-sans text-[11px] block sm:inline">
+                    — {mostrarTodasAsCasas ? 'A exibir todas as 38 casas do sistema' : `Associadas à ${empresas.find(e => e.id === (currentRole === 'PRESTADORA' ? currentEmpresaId : empresaId))?.nome.split(' (')[0] || 'empresa'}`}
                   </span>
                 </h4>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3 text-[11px]">
+                  <label className="flex items-center gap-1.5 font-bold text-slate-655 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={mostrarTodasAsCasas}
+                      onChange={(e) => {
+                        setMostrarTodasAsCasas(e.target.checked);
+                        setSelectedResidenciaIds([]); // Limpar seleção para evitar confusão de atribuição
+                      }}
+                      className="w-3.5 h-3.5 rounded text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    Ver Todas as Casas
+                  </label>
                   <button
                     type="button"
                     onClick={() => {

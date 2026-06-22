@@ -64,7 +64,8 @@ export default function ResidenciasManager({
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [showAll, setShowAll] = useState(false);
+  const itemsPerPage = showAll ? 1000 : 10;
 
   // Lista única de zonas para dropdown
   const zonasDisponiveis = Array.from(new Set(residencias.map(r => r.bairro))).sort();
@@ -323,8 +324,30 @@ export default function ResidenciasManager({
       {/* Tabela Principal de Resultados */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" id="residence-table-container">
         
-        <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between text-xs text-gray-550 font-medium">
-          <span>A mostrar <strong className="text-gray-800">{residenciasFiltradas.length}</strong> de <strong className="text-gray-800">{residencias.length}</strong> residências cadastradas.</span>
+        <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-550 font-medium">
+          <div className="flex items-center gap-3">
+            <span>A mostrar <strong className="text-gray-800">{residenciasFiltradas.length}</strong> de <strong className="text-gray-800">{residencias.length}</strong> residências cadastradas.</span>
+            <div className="flex bg-gray-200 p-0.5 rounded-lg text-[10px] shrink-0 border border-gray-300">
+              <button
+                type="button"
+                onClick={() => { setShowAll(false); setCurrentPage(1); }}
+                className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                  !showAll ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                Paginado (10)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowAll(true); setCurrentPage(1); }}
+                className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                  showAll ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                Ver Lista Completa
+              </button>
+            </div>
+          </div>
           {searchTerm || selectedZona !== 'Todos' || selectedEstadoFum !== 'Todos' || selectedEstadoACS !== 'Todos' || selectedEmpresa !== 'Todos' ? (
             <button
               onClick={() => {
