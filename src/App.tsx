@@ -228,9 +228,17 @@ export default function App() {
 
   // --- CRUD RESIDÊNCIAS ---
   const handleAddResidencia = (nova: Omit<Residencia, 'id' | 'codigo'>) => {
-    const proximoNum = residencias.length + 1;
-    const codigo = `EXO-${100 + proximoNum}`;
-    const id = `RES-${String(proximoNum).padStart(3, '0')}`;
+    const maxIdNum = residencias.reduce((max, r) => {
+      const num = parseInt(r.id.replace('RES-', ''), 10);
+      return isNaN(num) ? max : Math.max(max, num);
+    }, 0);
+    const id = `RES-${String(maxIdNum + 1).padStart(3, '0')}`;
+
+    const maxCodeNum = residencias.reduce((max, r) => {
+      const num = parseInt(r.codigo.replace('EXO-', ''), 10);
+      return isNaN(num) ? max : Math.max(max, num);
+    }, 0);
+    const codigo = `EXO-${maxCodeNum + 1}`;
     
     const novaResidencia: Residencia = {
       ...nova,
@@ -242,8 +250,14 @@ export default function App() {
     
     // Registar acção na auditoria
     const timestamp = obterDataHoraAtualString();
+    const maxHistNum = historico.reduce((max, h) => {
+      const num = parseInt(h.id.replace('HIST-', ''), 10);
+      return isNaN(num) ? max : Math.max(max, num);
+    }, 0);
+    const histId = `HIST-${String(maxHistNum + 1).padStart(3, '0')}`;
+
     const novaAcao: IntervencaoHistorico = {
-      id: `HIST-${String(historico.length + 1).padStart(3, '0')}`,
+      id: histId,
       residenciaId: id,
       residenciaCodigo: codigo,
       residenciaNome: nova.nomeOcupante,
@@ -315,8 +329,11 @@ export default function App() {
 
   // --- CRUD EMPRESAS PRESTADORAS ---
   const handleAddEmpresa = (nova: Omit<Empresa, 'id'>) => {
-    const proximoNum = empresas.length + 1;
-    const id = `EMP-00${proximoNum}`;
+    const maxIdNum = empresas.reduce((max, emp) => {
+      const num = parseInt(emp.id.replace('EMP-', ''), 10);
+      return isNaN(num) ? max : Math.max(max, num);
+    }, 0);
+    const id = `EMP-${String(maxIdNum + 1).padStart(3, '0')}`;
 
     const novaEmpresa: Empresa = {
       ...nova,
@@ -345,7 +362,11 @@ export default function App() {
 
   // --- PLANEAMENTO OPERACIONAL ---
   const handleAddPlaneamento = (novo: Omit<Planeamento, 'id'>) => {
-    const id = `PLAN-${String(planeamentos.length + 1).padStart(3, '0')}`;
+    const maxIdNum = planeamentos.reduce((max, p) => {
+      const num = parseInt(p.id.replace('PLAN-', ''), 10);
+      return isNaN(num) ? max : Math.max(max, num);
+    }, 0);
+    const id = `PLAN-${String(maxIdNum + 1).padStart(3, '0')}`;
     const novoPlan: Planeamento = {
       ...novo,
       id,
@@ -482,6 +503,7 @@ export default function App() {
       <LoginForm 
         empresas={empresas} 
         onLoginSuccess={handleLoginSuccess} 
+        onUpdateEmpresa={handleUpdateEmpresa}
       />
     );
   }

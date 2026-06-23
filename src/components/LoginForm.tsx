@@ -5,9 +5,10 @@ import { Empresa } from '../types';
 interface LoginFormProps {
   empresas: Empresa[];
   onLoginSuccess: (role: 'ADMIN_EXOFIX' | 'PRESTADORA', details: { id?: string; nome: string }) => void;
+  onUpdateEmpresa?: (atualizada: Empresa) => void;
 }
 
-export default function LoginForm({ empresas, onLoginSuccess }: LoginFormProps) {
+export default function LoginForm({ empresas, onLoginSuccess, onUpdateEmpresa }: LoginFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -65,19 +66,25 @@ export default function LoginForm({ empresas, onLoginSuccess }: LoginFormProps) 
     }
 
     if (pendingCompany) {
-      // Atualizar a palavra-passe no localStorage
-      const empresasLS = localStorage.getItem('exofix_empresas');
-      if (empresasLS) {
-        const lista: Empresa[] = JSON.parse(empresasLS);
-        const index = lista.findIndex((emp) => emp.id === pendingCompany.id);
-        if (index !== -1) {
-          lista[index].passwordKey = newPassword;
-          lista[index].isPasswordChanged = true;
-          localStorage.setItem('exofix_empresas', JSON.stringify(lista));
-          
-          // Sincronizar dados em memória da empresa atualizada
-          pendingCompany.passwordKey = newPassword;
-          pendingCompany.isPasswordChanged = true;
+      const updatedCompany: Empresa = {
+        ...pendingCompany,
+        passwordKey: newPassword,
+        isPasswordChanged: true
+      };
+
+      if (onUpdateEmpresa) {
+        onUpdateEmpresa(updatedCompany);
+      } else {
+        // Fallback p/ localStorage se não passado
+        const empresasLS = localStorage.getItem('exofix_empresas');
+        if (empresasLS) {
+          const lista: Empresa[] = JSON.parse(empresasLS);
+          const index = lista.findIndex((emp) => emp.id === pendingCompany.id);
+          if (index !== -1) {
+            lista[index].passwordKey = newPassword;
+            lista[index].isPasswordChanged = true;
+            localStorage.setItem('exofix_empresas', JSON.stringify(lista));
+          }
         }
       }
 
