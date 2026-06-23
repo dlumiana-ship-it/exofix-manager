@@ -118,12 +118,12 @@ export function gerarHistoricoInicial(): IntervencaoHistorico[] {
 
 // Inicializar e guardar dados nos cookies/localStorage para persistência duradoura
 export function obterDadosIniciais() {
-  if (localStorage.getItem('exofix_seed_version') !== '4') {
+  if (localStorage.getItem('exofix_seed_version') !== '5') {
     localStorage.removeItem('exofix_residencias');
     localStorage.removeItem('exofix_empresas');
     localStorage.removeItem('exofix_planeamentos');
     localStorage.removeItem('exofix_historico');
-    localStorage.setItem('exofix_seed_version', '4');
+    localStorage.setItem('exofix_seed_version', '5');
   }
 
   const residenciasLS = localStorage.getItem('exofix_residencias');

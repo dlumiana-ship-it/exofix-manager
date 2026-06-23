@@ -27,6 +27,8 @@ import PlaneamentoManager from './components/PlaneamentoManager';
 import PrestadoraDashboard from './components/PrestadoraDashboard';
 import RelatoriosView from './components/RelatoriosView';
 
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
 export default function App() {
   // 1. Estados Gerais Autenticação
   const [currentUser, setCurrentUser] = useState<{
@@ -58,7 +60,7 @@ export default function App() {
     // Carregar dados iniciais do servidor
     async function loadServerData() {
       try {
-        const res = await fetch('/api/data');
+        const res = await fetch(`${API_URL}/api/data`);
         if (!res.ok) throw new Error('Servidor indisponível');
         const data = await res.json();
 
@@ -76,7 +78,7 @@ export default function App() {
           };
 
           // Gravar no servidor
-          await fetch('/api/data', {
+          await fetch(`${API_URL}/api/data`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -116,7 +118,7 @@ export default function App() {
     loadServerData();
 
     // Conectar ao canal de sincronização em tempo real (SSE)
-    const eventSource = new EventSource('/api/sync');
+    const eventSource = new EventSource(`${API_URL}/api/sync`);
 
     eventSource.onmessage = (event) => {
       try {
@@ -170,7 +172,7 @@ export default function App() {
     });
 
     // Enviar ao servidor em segundo plano para propagação em tempo real
-    fetch('/api/data', {
+    fetch(`${API_URL}/api/data`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
