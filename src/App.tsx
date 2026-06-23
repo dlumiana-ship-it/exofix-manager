@@ -18,6 +18,8 @@ import {
 
 import { Residencia, Empresa, Planeamento, IntervencaoHistorico, EstadoIntervencao } from './types';
 import { obterDadosIniciais, salvarDados, resetarDados, sincronizarEstadosResidencias } from './data';
+import { db } from './firebase';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 import LoginForm from './components/LoginForm';
 import AdminDashboard from './components/AdminDashboard';
@@ -27,7 +29,7 @@ import PlaneamentoManager from './components/PlaneamentoManager';
 import PrestadoraDashboard from './components/PrestadoraDashboard';
 import RelatoriosView from './components/RelatoriosView';
 
-const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const DB_DOC = doc(db, 'exofix_db', 'main');
 
 export default function App() {
   // 1. Estados Gerais Autenticação
@@ -49,7 +51,7 @@ export default function App() {
   // Controle de menu responsivo
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Inicializar dados e registrar o EventSource de Sincronização em Tempo Real
+  // Inicializar dados e subscrever sincronização em tempo real via Firebase Firestore
   useEffect(() => {
     // Restaurar sessão se houver
     const userLS = localStorage.getItem('exofix_user');
@@ -57,97 +59,57 @@ export default function App() {
       setCurrentUser(JSON.parse(userLS));
     }
 
-    // Carregar dados iniciais do servidor
-    async function loadServerData() {
-      try {
-        const res = await fetch(`${API_URL}/api/data`);
-        if (!res.ok) throw new Error('Servidor indisponível');
-        const data = await res.json();
-
-        if (data.initialized === false) {
-          // Servidor limpo: gerar semente padrão (casas reais, nenhuma empresa)
-          const dadosIniciais = obterDadosIniciais();
-          const resSincronizadas = sincronizarEstadosResidencias(dadosIniciais.residencias, dadosIniciais.planeamentos);
-          
-          const payload = {
-            initialized: true,
-            residencias: resSincronizadas,
-            empresas: dadosIniciais.empresas,
-            planeamentos: dadosIniciais.planeamentos,
-            historico: dadosIniciais.historico
-          };
-
-          // Gravar no servidor
-          await fetch(`${API_URL}/api/data`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          setResidencias(resSincronizadas);
-          setEmpresas(dadosIniciais.empresas);
-          setPlaneamentos(dadosIniciais.planeamentos);
-          setHistorico(dadosIniciais.historico);
-          salvarDados(payload);
-        } else {
-          // Servidor possui dados guardados, ler e atualizar
-          const resSincronizadas = sincronizarEstadosResidencias(data.residencias, data.planeamentos);
-          setResidencias(resSincronizadas);
-          setEmpresas(data.empresas);
-          setPlaneamentos(data.planeamentos);
-          setHistorico(data.historico);
-          salvarDados({
-            residencias: resSincronizadas,
-            empresas: data.empresas,
-            planeamentos: data.planeamentos,
-            historico: data.historico
-          });
-        }
-      } catch (err) {
-        console.warn('Erro ao ligar ao servidor de sincronização. Usando cache local:', err);
-        // Fallback local
-        const dados = obterDadosIniciais();
-        const resSincronizadas = sincronizarEstadosResidencias(dados.residencias, dados.planeamentos);
+    // Subscrever ao documento Firestore — recebe atualizações em tempo real em todos os dispositivos
+    const unsubscribe = onSnapshot(DB_DOC, async (snapshot) => {
+      if (snapshot.exists()) {
+        // Documento existe: carregar dados do Firebase
+        const data = snapshot.data();
+        const resSincronizadas = sincronizarEstadosResidencias(
+          data.residencias || [],
+          data.planeamentos || []
+        );
         setResidencias(resSincronizadas);
-        setEmpresas(dados.empresas);
-        setPlaneamentos(dados.planeamentos);
-        setHistorico(dados.historico);
+        setEmpresas(data.empresas || []);
+        setPlaneamentos(data.planeamentos || []);
+        setHistorico(data.historico || []);
+        salvarDados({
+          residencias: resSincronizadas,
+          empresas: data.empresas || [],
+          planeamentos: data.planeamentos || [],
+          historico: data.historico || []
+        });
+      } else {
+        // Primeira vez: inicializar Firestore com dados padrão (casas reais, sem empresas)
+        const dadosIniciais = obterDadosIniciais();
+        const resSincronizadas = sincronizarEstadosResidencias(
+          dadosIniciais.residencias,
+          dadosIniciais.planeamentos
+        );
+        const payload = {
+          initialized: true,
+          residencias: resSincronizadas,
+          empresas: dadosIniciais.empresas,
+          planeamentos: dadosIniciais.planeamentos,
+          historico: dadosIniciais.historico
+        };
+        await setDoc(DB_DOC, payload);
+        setResidencias(resSincronizadas);
+        setEmpresas(dadosIniciais.empresas);
+        setPlaneamentos(dadosIniciais.planeamentos);
+        setHistorico(dadosIniciais.historico);
+        salvarDados(payload);
       }
-    }
+    }, (err) => {
+      console.error('Erro na sincronização Firebase. Usando cache local:', err);
+      const dados = obterDadosIniciais();
+      const resSincronizadas = sincronizarEstadosResidencias(dados.residencias, dados.planeamentos);
+      setResidencias(resSincronizadas);
+      setEmpresas(dados.empresas);
+      setPlaneamentos(dados.planeamentos);
+      setHistorico(dados.historico);
+    });
 
-    loadServerData();
-
-    // Conectar ao canal de sincronização em tempo real (SSE)
-    const eventSource = new EventSource(`${API_URL}/api/sync`);
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data && data.residencias) {
-          const resSincronizadas = sincronizarEstadosResidencias(data.residencias, data.planeamentos);
-          setResidencias(resSincronizadas);
-          setEmpresas(data.empresas);
-          setPlaneamentos(data.planeamentos);
-          setHistorico(data.historico);
-          salvarDados({
-            residencias: resSincronizadas,
-            empresas: data.empresas,
-            planeamentos: data.planeamentos,
-            historico: data.historico
-          });
-        }
-      } catch (err) {
-        console.error('Erro ao ler atualização em tempo real:', err);
-      }
-    };
-
-    eventSource.onerror = () => {
-      console.warn('Conexão em tempo real suspensa. Tentando reconectar...');
-    };
-
-    return () => {
-      eventSource.close();
-    };
+    return () => unsubscribe();
   }, []);
 
   // Sincronizar qualquer alteração local com o servidor e local cache
@@ -171,19 +133,15 @@ export default function App() {
       historico: novoHist
     });
 
-    // Enviar ao servidor em segundo plano para propagação em tempo real
-    fetch(`${API_URL}/api/data`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        initialized: true,
-        residencias: resSincronizadas,
-        empresas: novasEmp,
-        planeamentos: novosPlan,
-        historico: novoHist
-      })
+    // Gravar no Firebase Firestore — propaga automaticamente para todos os dispositivos
+    setDoc(DB_DOC, {
+      initialized: true,
+      residencias: resSincronizadas,
+      empresas: novasEmp,
+      planeamentos: novosPlan,
+      historico: novoHist
     }).catch(err => {
-      console.error('Falha ao sincronizar dados com o servidor central:', err);
+      console.error('Falha ao sincronizar dados com Firebase Firestore:', err);
     });
   };
 
