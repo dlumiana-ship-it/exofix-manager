@@ -31,7 +31,7 @@ export default function LoginForm({ empresas, onLoginSuccess, onUpdateEmpresa }:
 
     // 2. Verificar se é uma Empresa Prestadora
     const empresa = empresas.find(
-      (emp) => emp.username.toLowerCase() === username.toLowerCase() && emp.passwordKey === password
+      (emp) => emp.username.trim().toLowerCase() === username.trim().toLowerCase() && emp.passwordKey.trim() === password.trim()
     );
 
     if (empresa) {
@@ -68,7 +68,7 @@ export default function LoginForm({ empresas, onLoginSuccess, onUpdateEmpresa }:
     if (pendingCompany) {
       const updatedCompany: Empresa = {
         ...pendingCompany,
-        passwordKey: newPassword,
+        passwordKey: newPassword.trim(),
         isPasswordChanged: true
       };
 

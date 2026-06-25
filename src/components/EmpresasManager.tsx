@@ -152,8 +152,8 @@ export default function EmpresasManager({
         telefone,
         email,
         endereco,
-        username,
-        passwordKey,
+        username: username.trim(),
+        passwordKey: passwordKey.trim(),
         ativa,
       });
     } else {
@@ -164,8 +164,8 @@ export default function EmpresasManager({
         telefone,
         email,
         endereco,
-        username,
-        passwordKey,
+        username: username.trim(),
+        passwordKey: passwordKey.trim(),
         ativa,
         isPasswordChanged: false,
       });
